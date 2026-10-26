@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Langfuse Live Observability Dashboard - Groq + FastMCP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0B0F19;
+            --bg-card: #111827;
+            --bg-card-subtle: #1F2937;
+            --border-color: #374151;
+            --text-main: #F9FAFB;
+            --text-muted: #9CA3AF;
+            --primary: #3B82F6;
+            --primary-hover: #2563EB;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --purple: #8B5CF6;
+            --accent: #06B6D4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .brand-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .badge-logo {
+            background: linear-gradient(135deg, #FF5722 0%, #E91E63 100%);
+            color: white;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            box-shadow: 0 4px 14px rgba(233, 30, 99, 0.35);
+        }
+
+        .title-h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+
+        @media (max-width: 900px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        textarea {
+            width: 100%;
+            background: var(--bg-card-subtle);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 85px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            border-color: var(--primary);
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .btn-preset {
+            background: rgba(59, 130, 246, 0.1);
+            color: #93C5FD;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            padding: 5px 10px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-preset:hover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--primary);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Metric cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-box {
+            background: var(--bg-card-subtle);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-val {
+            font-size: 1.35rem;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+        }
+
+        .stat-lbl {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        /* Timeline and Spans */
+        .timeline-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 480px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .span-item {
+            background: var(--bg-card-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .span-item.generation {
+            border-left: 4px solid var(--purple);
+        }
+
+        .span-item.tool {
+            border-left: 4px solid var(--warning);
+        }
+
+        .span-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .span-tag {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .span-tag.gen {
+            background: rgba(139, 92, 246, 0.2);
+            color: #C4B5FD;
+        }
+
+        .span-tag.tool {
+            background: rgba(245, 158, 11, 0.2);
+            color: #FCD34D;
+        }
+
+        .span-duration {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .span-body {
+            font-size: 0.85rem;
+            color: #D1D5DB;
+        }
+
+        .code-box {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            margin-top: 6px;
+            word-break: break-all;
+            color: #E5E7EB;
+        }
+
+        .cloud-link-banner {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border: 1px dashed rgba(139, 92, 246, 0.4);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .cloud-btn {
+            background: #111827;
+            border: 1px solid var(--border-color);
+            color: #F9FAFB;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .cloud-btn:hover {
+            border-color: var(--purple);
+            color: #C4B5FD;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand-section">
+                <span class="badge-logo">LANGFUSE</span>
+                <div>
+                    <h1 class="title-h1">Observability & Tracing Dashboard</h1>
+                    <p class="subtitle">FastMCP Tools & Groq LLM Inference Monitoring</p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <div class="status-pill">
+                    <span class="status-dot"></span>
+                    <span>Backend Active (Port 8000)</span>
+                </div>
+                <div id="cloud-pill" class="status-pill" style="color: var(--purple); border-color: rgba(139, 92, 246, 0.3); background: rgba(139, 92, 246, 0.1);">
+                    <span id="cloud-status-text">Cloud Sync Configured</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid-2col">
+            <!-- Left: Live Execution Panel -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">🚀 Send Query & Generate Trace</span>
+                    <span style="font-size: 0.78rem; color: var(--text-muted);">Traced via @observe</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Quick Test Scenarios</label>
+                    <div class="preset-buttons">
+                        <button class="btn-preset" onclick="setQuery('What is 45 + 155?')">Math Tool</button>
+                        <button class="btn-preset" onclick="setQuery('What is the weather in Paris?')">Weather Tool</button>
+                        <button class="btn-preset" onclick="setQuery('What is the weather in Tokyo and what is 250 + 750?')">Multi-Tool Calling</button>
+                    </div>
+                    <label for="question-input">Prompt / Question</label>
+                    <textarea id="question-input" placeholder="Type a prompt that triggers MCP tools...">What is the weather in Paris and what is 120 + 350?</textarea>
+                </div>
+
+                <button id="send-btn" class="btn-primary" onclick="executeAsk()">
+                    <span>Execute & Trace Request</span>
+                </button>
+
+                <div style="margin-top: 24px;">
+                    <label>Agent Final Answer</label>
+                    <div id="answer-box" class="code-box" style="min-height: 60px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 0.9rem; line-height: 1.5; color: #60A5FA;">
+                        Run a query to view the generated response and step-by-step latency metrics.
+                    </div>
+                </div>
+
+                <div class="cloud-link-banner">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 700; color: #E5E7EB;">Official Langfuse Cloud UI</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">View global production traces & cost analysis</div>
+                    </div>
+                    <a id="cloud-link" href="https://cloud.langfuse.com" target="_blank" class="cloud-btn">
+                        <span>Open Cloud Web UI ↗</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Right: Real-time Telemetry & Waterfall Breakdown -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">⏱️ Tracing & Latency Waterfall</span>
+                    <button onclick="refreshTraces()" style="background: none; border: none; color: var(--primary); cursor: pointer; font-size: 0.82rem; font-weight: 600;">↻ Refresh</button>
+                </div>
+
+                <!-- Stats summary -->
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div id="stat-total-time" class="stat-val">0ms</div>
+                        <div class="stat-lbl">Total Time</div>
+                    </div>
+                    <div class="stat-box">
+                        <div id="stat-llm-time" class="stat-val" style="color: var(--purple);">0ms</div>
+                        <div class="stat-lbl">LLM Inference</div>
+                    </div>
+                    <div class="stat-box">
+                        <div id="stat-tool-time" class="stat-val" style="color: var(--warning);">0ms</div>
+                        <div class="stat-lbl">MCP Tool Calls</div>
+                    </div>
+                </div>
+
+                <label>Execution Trace Spans</label>
+                <div id="spans-container" class="timeline-container">
+                    <div style="text-align: center; color: var(--text-muted); padding: 40px 0; font-size: 0.88rem;">
+                        No recent traces recorded yet. Execute a query on the left to see the step-by-step timeline.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setQuery(text) {
+            document.getElementById('question-input').value = text;
+        }
+
+        async function checkHealth() {
+            try {
+                const res = await fetch('/health');
+                const data = await res.json();
+                if (data.langfuse && data.langfuse.enabled) {
+                    document.getElementById('cloud-status-text').innerText = 'Langfuse Cloud Synced';
+                } else {
+                    document.getElementById('cloud-status-text').innerText = 'Local Observability Live';
+                }
+            } catch (e) {
+                console.error('Health check failed', e);
+            }
+        }
+
+        async function executeAsk() {
+            const question = document.getElementById('question-input').value.trim();
+            if (!question) return;
+
+            const sendBtn = document.getElementById('send-btn');
+            const answerBox = document.getElementById('answer-box');
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span>Tracing execution...</span>';
+            answerBox.innerText = 'Communicating with Groq & FastMCP...';
+
+            try {
+                const res = await fetch('/ask/local', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question })
+                });
+                const data = await res.json();
+                answerBox.innerText = data.answer || '(Empty answer)';
+                await refreshTraces();
+            } catch (err) {
+                answerBox.innerText = 'Error: ' + err.message;
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<span>Execute & Trace Request</span>';
+            }
+        }
+
+        async function refreshTraces() {
+            try {
+                const res = await fetch('/api/telemetry/traces');
+                const data = await res.json();
+                if (data.traces && data.traces.length > 0) {
+                    renderTrace(data.traces[0]);
+                }
+            } catch (e) {
+                console.error('Failed to fetch traces', e);
+            }
+        }
+
+        function renderTrace(trace) {
+            document.getElementById('stat-total-time').innerText = trace.total_duration_ms + 'ms';
+
+            let llmTime = 0;
+            let toolTime = 0;
+
+            const container = document.getElementById('spans-container');
+            container.innerHTML = '';
+
+            (trace.timeline || []).forEach((span, index) => {
+                const item = document.createElement('div');
+                item.className = 'span-item ' + (span.type === 'generation' ? 'generation' : 'tool');
+
+                if (span.type === 'generation') {
+                    llmTime += span.duration_ms || 0;
+                    item.innerHTML = `
+                        <div class="span-header">
+                            <div>
+                                <span class="span-tag gen">LLM Inference</span>
+                                <strong style="margin-left: 6px; font-size: 0.88rem;">${span.step}</strong>
+                            </div>
+                            <span class="span-duration">${span.duration_ms} ms</span>
+                        </div>
+                        <div class="span-body">
+                            <div><strong>Model:</strong> ${span.model}</div>
+                            <div class="code-box">Prompt Tokens: ${span.tokens.prompt_tokens || 0} | Completion Tokens: ${span.tokens.completion_tokens || 0} | Tool Calls Requested: ${span.tool_calls_requested}</div>
+                        </div>
+                    `;
+                } else {
+                    toolTime += span.duration_ms || 0;
+                    item.innerHTML = `
+                        <div class="span-header">
+                            <div>
+                                <span class="span-tag tool">MCP Tool Call</span>
+                                <strong style="margin-left: 6px; font-size: 0.88rem;">${span.step}</strong>
+                            </div>
+                            <span class="span-duration">${span.duration_ms} ms</span>
+                        </div>
+                        <div class="span-body">
+                            <div><strong>Input:</strong> <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">${JSON.stringify(span.args)}</span></div>
+                            <div class="code-box"><strong>Output:</strong> ${JSON.stringify(span.result)}</div>
+                        </div>
+                    `;
+                }
+                container.appendChild(item);
+            });
+
+            document.getElementById('stat-llm-time').innerText = Math.round(llmTime) + 'ms';
+            document.getElementById('stat-tool-time').innerText = Math.round(toolTime) + 'ms';
+        }
+
+        checkHealth();
+        refreshTraces();
+    </script>
+</body>
+</html>

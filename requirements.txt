@@ -1,0 +1,9 @@
+fastmcp
+fastapi
+uvicorn[standard]
+groq
+openai
+python-dotenv
+pytest
+pytest-asyncio
+langfuse>=5.0.0
